@@ -8,13 +8,16 @@ import akka.http.scaladsl.server._
 import akka.pattern.ask
 import akka.util.Timeout
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class RestApi(system: ActorSystem, timeout: Timeout) extends RestRoutes {
-  implicit val requestTimeout = timeout
-  implicit def executionContext = system.dispatcher
+  implicit val requestTimeout: Timeout =
+    timeout
+  implicit def executionContext: ExecutionContext =
+    system.dispatcher
 
-  def createBoxOffice = system.actorOf(BoxOffice.props, BoxOffice.name)
+  def createBoxOffice(): ActorRef =
+    system.actorOf(BoxOffice.props, BoxOffice.name)
 }
 
 trait RestRoutes extends BoxOfficeApi with EventMarshalling {
@@ -22,7 +25,7 @@ trait RestRoutes extends BoxOfficeApi with EventMarshalling {
 
   def routes: Route = eventsRoute ~ eventRoute ~ ticketsRoute
 
-  def eventsRoute =
+  def eventsRoute: Route =
     pathPrefix("events") {
       pathEndOrSingleSlash {
         get {
@@ -34,7 +37,7 @@ trait RestRoutes extends BoxOfficeApi with EventMarshalling {
       }
     }
 
-  def eventRoute =
+  def eventRoute: Route =
     pathPrefix("events" / Segment) { event =>
       pathEndOrSingleSlash {
         post {
@@ -63,7 +66,7 @@ trait RestRoutes extends BoxOfficeApi with EventMarshalling {
       }
     }
 
-  def ticketsRoute =
+  def ticketsRoute: Route =
     pathPrefix("events" / Segment / "tickets") { event =>
       post {
         pathEndOrSingleSlash {
@@ -88,29 +91,29 @@ trait BoxOfficeApi {
   implicit def executionContext: ExecutionContext
   implicit def requestTimeout: Timeout
 
-  lazy val boxOffice = createBoxOffice()
+  lazy val boxOffice: ActorRef =
+    createBoxOffice()
 
-  def createEvent(event: String, nrOfTickets: Int) =
+  def createEvent(event: String, nrOfTickets: Int): Future[EventResponse] =
     boxOffice
       .ask(CreateEvent(event, nrOfTickets))
       .mapTo[EventResponse]
 
-  def getEvents() =
+  def getEvents(): Future[Events] =
     boxOffice.ask(GetEvents).mapTo[Events]
 
-  def getEvent(event: String) =
+  def getEvent(event: String): Future[Option[Event]] =
     boxOffice
       .ask(GetEvent(event))
       .mapTo[Option[Event]]
 
-  def cancelEvent(event: String) =
+  def cancelEvent(event: String): Future[Option[Event]] =
     boxOffice
       .ask(CancelEvent(event))
       .mapTo[Option[Event]]
 
-  def requestTickets(event: String, tickets: Int) =
+  def requestTickets(event: String, tickets: Int): Future[TicketSeller.Tickets] =
     boxOffice
       .ask(GetTickets(event, tickets))
       .mapTo[TicketSeller.Tickets]
 }
-//

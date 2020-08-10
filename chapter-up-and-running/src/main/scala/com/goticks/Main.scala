@@ -1,29 +1,35 @@
 package com.goticks
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
-
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
+import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
-
 import com.typesafe.config.{Config, ConfigFactory}
 
 object Main extends App with RequestTimeout {
 
-  val config = ConfigFactory.load()
-  val host = config.getString("http.host") // Gets the host and a port from the configuration
-  val port = config.getInt("http.port")
+  val config: Config =
+    ConfigFactory.load()
+  val host: String =
+    config.getString("http.host") // Gets the host and a port from the configuration
+  val port: Int =
+    config.getInt("http.port")
 
-  implicit val system = ActorSystem() // ActorMaterializer requires an implicit ActorSystem
-  implicit val ec = system.dispatcher // bindingFuture.map requires an implicit ExecutionContext
+  implicit val system: ActorSystem =
+    ActorSystem() // ActorMaterializer requires an implicit ActorSystem
+  implicit val ec: ExecutionContextExecutor =
+    system.dispatcher // bindingFuture.map requires an implicit ExecutionContext
 
-  val api = new RestApi(system, requestTimeout(config)).routes // the RestApi provides a Route
+  val api: Route =
+    new RestApi(system, requestTimeout(config)).routes // the RestApi provides a Route
 
-  implicit val materializer = ActorMaterializer() // bindAndHandle requires an implicit materializer
+  implicit val materializer: ActorMaterializer =
+    ActorMaterializer() // bindAndHandle requires an implicit materializer
   val bindingFuture: Future[ServerBinding] =
     Http().bindAndHandle(api, host, port) //Starts the HTTP server
 
