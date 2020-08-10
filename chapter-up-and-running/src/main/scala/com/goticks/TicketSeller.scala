@@ -1,6 +1,6 @@
 package com.goticks
 
-import akka.actor.{ Actor, Props, PoisonPill }
+import akka.actor.{Actor, Props, PoisonPill}
 
 object TicketSeller {
   def props(event: String) = Props(new TicketSeller(event))
@@ -8,8 +8,7 @@ object TicketSeller {
   case class Add(tickets: Vector[Ticket])
   case class Buy(tickets: Int)
   case class Ticket(id: Int)
-  case class Tickets(event: String,
-                     entries: Vector[Ticket] = Vector.empty[Ticket])
+  case class Tickets(event: String, entries: Vector[Ticket] = Vector.empty[Ticket])
   case object GetEvent
   case object Cancel
 
@@ -24,7 +23,7 @@ class TicketSeller(event: String) extends Actor {
     case Add(newTickets) => tickets = tickets ++ newTickets
     case Buy(nrOfTickets) =>
       val entries = tickets.take(nrOfTickets)
-      if(entries.size >= nrOfTickets) {
+      if (entries.size >= nrOfTickets) {
         sender() ! Tickets(event, entries)
         tickets = tickets.drop(nrOfTickets)
       } else sender() ! Tickets(event)
