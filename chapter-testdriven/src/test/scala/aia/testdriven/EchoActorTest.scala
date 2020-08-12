@@ -1,21 +1,20 @@
 package aia.testdriven
 
-import akka.testkit.{ TestKit, ImplicitSender }
-import akka.actor.{ Props, Actor, ActorSystem }
+import akka.testkit.{TestKit, ImplicitSender}
+import akka.actor.{Props, Actor, ActorSystem}
 import org.scalatest.WordSpecLike
 
 import akka.util.Timeout
 import scala.concurrent.Await
-import scala.util.{ Success, Failure }
+import scala.util.{Success, Failure}
 
 import scala.language.postfixOps
 
-
-class EchoActorTest extends TestKit(ActorSystem("testsystem"))
-  with WordSpecLike
-  with ImplicitSender
-  with StopSystemAfterAll {
-
+class EchoActorTest
+    extends TestKit(ActorSystem("testsystem"))
+    with WordSpecLike
+    with ImplicitSender
+    with StopSystemAfterAll {
 
   "An EchoActor" must {
     "Reply with the same message it receives" in {
@@ -44,11 +43,9 @@ class EchoActorTest extends TestKit(ActorSystem("testsystem"))
   }
 }
 
-
 class EchoActor extends Actor {
   def receive = {
     case msg =>
       sender() ! msg
   }
 }
-

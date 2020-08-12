@@ -2,15 +2,16 @@ package aia.testdriven
 
 import org.scalatest.WordSpecLike
 import org.scalatest.MustMatchers
-import akka.testkit.{ TestActorRef, TestKit }
+import akka.testkit.{TestActorRef, TestKit}
 import akka.actor._
 
 package silentactor02 {
 
-class SilentActorTest extends TestKit(ActorSystem("testsystem"))
-    with WordSpecLike
-    with MustMatchers
-    with StopSystemAfterAll {
+  class SilentActorTest
+      extends TestKit(ActorSystem("testsystem"))
+      with WordSpecLike
+      with MustMatchers
+      with StopSystemAfterAll {
 
     "A Silent Actor" must {
 
@@ -24,7 +25,6 @@ class SilentActorTest extends TestKit(ActorSystem("testsystem"))
 
     }
   }
-
 
   object SilentActor {
     case class SilentMessage(data: String)
@@ -46,10 +46,11 @@ class SilentActorTest extends TestKit(ActorSystem("testsystem"))
 
 package silentactor03 {
 
-  class SilentActorTest extends TestKit(ActorSystem("testsystem"))
-    with WordSpecLike
-    with MustMatchers
-    with StopSystemAfterAll {
+  class SilentActorTest
+      extends TestKit(ActorSystem("testsystem"))
+      with WordSpecLike
+      with MustMatchers
+      with StopSystemAfterAll {
 
     "A Silent Actor" must {
 
@@ -66,8 +67,6 @@ package silentactor03 {
     }
 
   }
-
-
 
   object SilentActor {
     case class SilentMessage(data: String)

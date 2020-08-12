@@ -6,10 +6,11 @@ import akka.actor._
 
 //This test is ignored in the BookBuild, it's added to the defaultExcludedNames
 
-class SilentActor01Test extends TestKit(ActorSystem("testsystem"))
-  with WordSpecLike
-  with MustMatchers
-  with StopSystemAfterAll {
+class SilentActor01Test
+    extends TestKit(ActorSystem("testsystem"))
+    with WordSpecLike
+    with MustMatchers
+    with StopSystemAfterAll {
   // Commented to make the travis build pass, this is the original test in the book
   // "A Silent Actor" must {
   //   "change state when it receives a message, single threaded" in {
@@ -34,11 +35,8 @@ class SilentActor01Test extends TestKit(ActorSystem("testsystem"))
 
 }
 
-
-
 class SilentActor extends Actor {
   def receive = {
     case msg =>
   }
 }
-
