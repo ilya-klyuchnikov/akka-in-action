@@ -1,13 +1,12 @@
 package aia.testdriven
 
-import akka.testkit.{TestKit, ImplicitSender}
-import akka.actor.{Props, Actor, ActorSystem}
+import akka.testkit.{ImplicitSender, TestKit}
+import akka.actor.{Actor, ActorSystem, Props}
 import org.scalatest.WordSpecLike
-
 import akka.util.Timeout
-import scala.concurrent.Await
-import scala.util.{Success, Failure}
 
+import scala.concurrent.{Await, ExecutionContextExecutor}
+import scala.util.{Failure, Success}
 import scala.language.postfixOps
 
 class EchoActorTest
@@ -21,8 +20,10 @@ class EchoActorTest
 
       import akka.pattern.ask
       import scala.concurrent.duration._
-      implicit val timeout = Timeout(3 seconds)
-      implicit val ec = system.dispatcher
+      implicit val timeout: Timeout =
+        Timeout(3 seconds)
+      implicit val ec: ExecutionContextExecutor =
+        system.dispatcher
       val echo = system.actorOf(Props[EchoActor], "echo1")
       val future = echo.ask("some message")
       future.onComplete {
@@ -44,7 +45,7 @@ class EchoActorTest
 }
 
 class EchoActor extends Actor {
-  def receive = {
+  def receive: Receive = {
     case msg =>
       sender() ! msg
   }

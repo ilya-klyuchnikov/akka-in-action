@@ -21,10 +21,8 @@ class Greeter01Test extends TestKit(testSystem) with WordSpecLike with StopSyste
 }
 
 object Greeter01Test {
-  val testSystem = {
-    val config = ConfigFactory.parseString("""
-         akka.loggers = [akka.testkit.TestEventListener]
-      """)
+  val testSystem: ActorSystem = {
+    val config = ConfigFactory.parseString("akka.loggers = [akka.testkit.TestEventListener]")
     ActorSystem("testsystem", config)
   }
 }

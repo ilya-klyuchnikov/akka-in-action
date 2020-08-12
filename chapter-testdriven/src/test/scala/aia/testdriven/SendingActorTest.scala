@@ -39,7 +39,7 @@ class SendingActorTest
 }
 
 object SendingActor {
-  def props(receiver: ActorRef) =
+  def props(receiver: ActorRef): Props =
     Props(new SendingActor(receiver))
   case class Event(id: Long)
   case class SortEvents(unsorted: Vector[Event])
@@ -48,7 +48,7 @@ object SendingActor {
 
 class SendingActor(receiver: ActorRef) extends Actor {
   import SendingActor._
-  def receive = {
+  def receive: Receive = {
     case SortEvents(unsorted) =>
       receiver ! SortedEvents(unsorted.sortBy(_.id))
   }

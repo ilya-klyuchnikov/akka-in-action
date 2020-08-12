@@ -24,11 +24,11 @@ class Greeter02Test extends TestKit(ActorSystem("testsystem")) with WordSpecLike
 }
 
 object Greeter02 {
-  def props(listener: Option[ActorRef] = None) =
+  def props(listener: Option[ActorRef] = None): Props =
     Props(new Greeter02(listener))
 }
 class Greeter02(listener: Option[ActorRef]) extends Actor with ActorLogging {
-  def receive = {
+  def receive: Receive = {
     case Greeting(who) =>
       val message = "Hello " + who + "!"
       log.info(message)

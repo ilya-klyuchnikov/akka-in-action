@@ -36,7 +36,7 @@ class SilentActor01Test
 }
 
 class SilentActor extends Actor {
-  def receive = {
+  def receive: Receive = {
     case msg =>
   }
 }
