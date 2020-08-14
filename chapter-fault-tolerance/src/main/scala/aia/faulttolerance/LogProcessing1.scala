@@ -2,11 +2,11 @@ package aia.faulttolerance
 
 import java.io.File
 import java.util.UUID
-import akka.actor._
-import akka.actor.SupervisorStrategy.{Stop, Resume, Restart, Escalate}
-import akka.actor.OneForOneStrategy
-import scala.concurrent.duration._
-import language.postfixOps
+
+import akka.actor.SupervisorStrategy.{Restart, Resume, Stop}
+import akka.actor.{OneForOneStrategy, _}
+
+import scala.language.postfixOps
 
 package dbstrategy1 {
 
@@ -23,7 +23,7 @@ package dbstrategy1 {
   }
 
   object LogProcessingSupervisor {
-    def props(sources: Vector[String], databaseUrl: String) =
+    def props(sources: Vector[String], databaseUrl: String): Props =
       Props(new LogProcessingSupervisor(sources, databaseUrl))
     def name = "file-watcher-supervisor"
   }
@@ -34,14 +34,14 @@ package dbstrategy1 {
   ) extends Actor
       with ActorLogging {
 
-    override def supervisorStrategy =
+    override def supervisorStrategy: SupervisorStrategy =
       OneForOneStrategy() {
         case _: CorruptedFileException      => Resume
         case _: DbBrokenConnectionException => Restart
         case _: DiskError                   => Stop
       }
 
-    var fileWatchers = sources.map { source =>
+    var fileWatchers: Vector[ActorRef] = sources.map { source =>
       val dbWriter = context.actorOf(
         DbWriter.props(databaseUrl),
         DbWriter.name(databaseUrl),
@@ -60,7 +60,7 @@ package dbstrategy1 {
       fileWatcher
     }
 
-    def receive = {
+    def receive: Receive = {
       case Terminated(actorRef) =>
         if (fileWatchers.contains(actorRef)) {
           fileWatchers = fileWatchers.filterNot(_ == actorRef)
@@ -73,7 +73,7 @@ package dbstrategy1 {
   }
 
   object FileWatcher {
-    def props(source: String, logProcessor: ActorRef) =
+    def props(source: String, logProcessor: ActorRef): Props =
       Props(new FileWatcher(source, logProcessor))
     def name = s"file-watcher-${UUID.randomUUID.toString}"
     case class NewFile(file: File, timeAdded: Long)
@@ -85,7 +85,7 @@ package dbstrategy1 {
 
     import FileWatcher._
 
-    def receive = {
+    def receive: Receive = {
       case NewFile(file, _) =>
         logProcessor ! LogProcessor.LogFile(file)
       case SourceAbandoned(uri) if uri == source =>
@@ -94,7 +94,7 @@ package dbstrategy1 {
   }
 
   object LogProcessor {
-    def props(dbWriter: ActorRef) =
+    def props(dbWriter: ActorRef): Props =
       Props(new LogProcessor(dbWriter))
     def name = s"log_processor_${UUID.randomUUID.toString}"
     // represents a new log file
@@ -105,7 +105,7 @@ package dbstrategy1 {
 
     import LogProcessor._
 
-    def receive = {
+    def receive: Receive = {
       case LogFile(file) =>
         val lines: Vector[DbWriter.Line] = parse(file)
         lines.foreach(dbWriter ! _)
@@ -113,7 +113,7 @@ package dbstrategy1 {
   }
 
   object DbWriter {
-    def props(databaseUrl: String) =
+    def props(databaseUrl: String): Props =
       Props(new DbWriter(databaseUrl))
     def name(databaseUrl: String) =
       s"""db-writer-${databaseUrl.split("/").last}"""
@@ -126,7 +126,7 @@ package dbstrategy1 {
     val connection = new DbCon(databaseUrl)
 
     import DbWriter._
-    def receive = {
+    def receive: Receive = {
       case Line(time, message, messageType) =>
         connection.write(Map('time -> time, 'message -> message, 'messageType -> messageType))
     }

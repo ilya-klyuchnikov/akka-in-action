@@ -35,7 +35,7 @@ class LifeCycleHooks extends Actor with ActorLogging {
 
   }
 
-  def receive = {
+  def receive: Receive = {
     case ForceRestart =>
       throw new ForceRestartException
     case msg: AnyRef =>

@@ -3,9 +3,8 @@ package aia.faulttolerance
 import java.io.File
 import java.util.UUID
 import akka.actor._
-import akka.actor.SupervisorStrategy.{Stop, Resume, Restart, Escalate}
+import akka.actor.SupervisorStrategy.{Stop, Resume, Restart}
 import akka.actor.OneForOneStrategy
-import scala.concurrent.duration._
 import language.postfixOps
 
 package dbstrategy2 {
@@ -27,7 +26,7 @@ package dbstrategy2 {
   }
 
   object LogProcessingSupervisor {
-    def props(sources: Vector[String], databaseUrls: Vector[String]) =
+    def props(sources: Vector[String], databaseUrls: Vector[String]): Props =
       Props(new LogProcessingSupervisor(sources, databaseUrls))
     def name = "file-watcher-supervisor"
   }
@@ -46,12 +45,12 @@ package dbstrategy2 {
       fileWatcher
     }
 
-    override def supervisorStrategy =
+    override def supervisorStrategy: SupervisorStrategy =
       AllForOneStrategy() {
         case _: DiskError => Stop
       }
 
-    def receive = {
+    def receive: Receive = {
       case Terminated(fileWatcher) =>
         fileWatchers = fileWatchers.filterNot(_ == fileWatcher)
         if (fileWatchers.isEmpty) {
@@ -72,20 +71,21 @@ package dbstrategy2 {
       with FileWatchingAbilities {
     register(source)
 
-    override def supervisorStrategy =
+    override def supervisorStrategy: SupervisorStrategy =
       OneForOneStrategy() {
         case _: CorruptedFileException => Resume
       }
 
-    val logProcessor = context.actorOf(
-      LogProcessor.props(databaseUrls),
-      LogProcessor.name,
-    )
+    val logProcessor: ActorRef =
+      context.actorOf(
+        LogProcessor.props(databaseUrls),
+        LogProcessor.name,
+      )
     context.watch(logProcessor)
 
     import FileWatcher._
 
-    def receive = {
+    def receive: Receive = {
       case NewFile(file, _) =>
         logProcessor ! LogProcessor.LogFile(file)
       case SourceAbandoned(uri) if uri == source =>
@@ -98,7 +98,7 @@ package dbstrategy2 {
   }
 
   object LogProcessor {
-    def props(databaseUrls: Vector[String]) =
+    def props(databaseUrls: Vector[String]): Props =
       Props(new LogProcessor(databaseUrls))
     def name = s"log_processor_${UUID.randomUUID.toString}"
     // represents a new log file
@@ -108,16 +108,18 @@ package dbstrategy2 {
   class LogProcessor(databaseUrls: Vector[String]) extends Actor with ActorLogging with LogParsing {
     require(databaseUrls.nonEmpty)
 
-    val initialDatabaseUrl = databaseUrls.head
-    var alternateDatabases = databaseUrls.tail
+    val initialDatabaseUrl: String =
+      databaseUrls.head
+    var alternateDatabases: Vector[String] =
+      databaseUrls.tail
 
-    override def supervisorStrategy =
+    override def supervisorStrategy: SupervisorStrategy =
       OneForOneStrategy() {
         case _: DbBrokenConnectionException => Restart
         case _: DbNodeDownException         => Stop
       }
 
-    var dbWriter = context.actorOf(
+    var dbWriter: ActorRef = context.actorOf(
       DbWriter.props(initialDatabaseUrl),
       DbWriter.name(initialDatabaseUrl),
     )
@@ -125,7 +127,7 @@ package dbstrategy2 {
 
     import LogProcessor._
 
-    def receive = {
+    def receive: Receive = {
       case LogFile(file) =>
         val lines: Vector[DbWriter.Line] = parse(file)
         lines.foreach(dbWriter ! _)
@@ -146,7 +148,7 @@ package dbstrategy2 {
   }
 
   object DbWriter {
-    def props(databaseUrl: String) =
+    def props(databaseUrl: String): Props =
       Props(new DbWriter(databaseUrl))
     def name(databaseUrl: String) =
       s"""db-writer-${databaseUrl.split("/").last}"""
@@ -159,7 +161,7 @@ package dbstrategy2 {
     val connection = new DbCon(databaseUrl)
 
     import DbWriter._
-    def receive = {
+    def receive: Receive = {
       case Line(time, message, messageType) =>
         connection.write(Map('time -> time, 'message -> message, 'messageType -> messageType))
     }

@@ -31,12 +31,12 @@ package dbstrategy3 {
       fileWatcher
     }
 
-    override def supervisorStrategy =
+    override def supervisorStrategy: SupervisorStrategy =
       AllForOneStrategy() {
         case _: DiskError => Stop
       }
 
-    def receive = {
+    def receive: Receive = {
       case Terminated(fileWatcher) =>
         fileWatchers = fileWatchers.filterNot(w => w == fileWatcher)
         if (fileWatchers.isEmpty) self ! PoisonPill
@@ -49,7 +49,7 @@ package dbstrategy3 {
     import FileWatcherProtocol._
     import LogProcessingProtocol._
 
-    def receive = {
+    def receive: Receive = {
       case NewFile(file, _) =>
         logProcSupervisor ! LogFile(file)
       case SourceAbandoned(uri) if uri == sourceUri =>
@@ -58,22 +58,25 @@ package dbstrategy3 {
   }
 
   class LogProcSupervisor(dbSupervisorProps: Props) extends Actor {
-    override def supervisorStrategy =
+    override def supervisorStrategy: SupervisorStrategy =
       OneForOneStrategy() {
         case _: CorruptedFileException => Resume
       }
-    val dbSupervisor = context.actorOf(dbSupervisorProps)
-    val logProcProps = Props(new LogProcessor(dbSupervisor))
-    val logProcessor = context.actorOf(logProcProps)
+    val dbSupervisor: ActorRef =
+      context.actorOf(dbSupervisorProps)
+    val logProcProps: Props =
+      Props(new LogProcessor(dbSupervisor))
+    val logProcessor: ActorRef =
+      context.actorOf(logProcProps)
 
-    def receive = {
+    def receive: Receive = {
       case m => logProcessor forward (m)
     }
   }
 
   class LogProcessor(dbSupervisor: ActorRef) extends Actor with LogParsing {
     import LogProcessingProtocol._
-    def receive = {
+    def receive: Receive = {
       case LogFile(file) =>
         val lines = parse(file)
         lines.foreach(dbSupervisor ! _)
@@ -81,23 +84,25 @@ package dbstrategy3 {
   }
 
   class DbImpatientSupervisor(writerProps: Props) extends Actor {
-    override def supervisorStrategy =
+    override def supervisorStrategy: SupervisorStrategy =
       OneForOneStrategy(maxNrOfRetries = 5, withinTimeRange = 60 seconds) {
         case _: DbBrokenConnectionException => Restart
       }
-    val writer = context.actorOf(writerProps)
-    def receive = {
+    val writer: ActorRef =
+      context.actorOf(writerProps)
+    def receive: Receive = {
       case m => writer forward (m)
     }
   }
 
   class DbSupervisor(writerProps: Props) extends Actor {
-    override def supervisorStrategy =
+    override def supervisorStrategy: SupervisorStrategy =
       OneForOneStrategy() {
         case _: DbBrokenConnectionException => Restart
       }
-    val writer = context.actorOf(writerProps)
-    def receive = {
+    val writer: ActorRef =
+      context.actorOf(writerProps)
+    def receive: Receive = {
       case m => writer forward (m)
     }
   }
@@ -106,7 +111,7 @@ package dbstrategy3 {
     val connection = new DbCon(databaseUrl)
 
     import LogProcessingProtocol._
-    def receive = {
+    def receive: Receive = {
       case Line(time, message, messageType) =>
         connection.write(Map('time -> time, 'message -> message, 'messageType -> messageType))
     }
@@ -118,7 +123,6 @@ package dbstrategy3 {
       * Writes a map to a database.
       * @param map the map to write to the database.
       * @throws DbBrokenConnectionException when the connection is broken. It might be back later
-      * @throws DbNodeDownException when the database Node has been removed from the database cluster. It will never work again.
       */
     def write(map: Map[Symbol, Any]): Unit = {
       //
