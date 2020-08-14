@@ -21,7 +21,6 @@ object BoxOffice {
   sealed trait EventResponse
   case class EventCreated(event: Event) extends EventResponse
   case object EventExists extends EventResponse
-
 }
 
 class BoxOffice(implicit timeout: Timeout) extends Actor {

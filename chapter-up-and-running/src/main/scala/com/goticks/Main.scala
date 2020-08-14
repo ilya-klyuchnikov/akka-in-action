@@ -1,15 +1,15 @@
 package com.goticks
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
-import scala.util.{Failure, Success}
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.server.Route
-import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
+
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 object Main extends App with RequestTimeout {
 
@@ -20,18 +20,15 @@ object Main extends App with RequestTimeout {
   val port: Int =
     config.getInt("http.port")
 
-  implicit val system: ActorSystem =
-    ActorSystem() // ActorMaterializer requires an implicit ActorSystem
-  implicit val ec: ExecutionContextExecutor =
+  implicit val system: ActorSystem = ActorSystem()
+  implicit val ec: ExecutionContext =
     system.dispatcher // bindingFuture.map requires an implicit ExecutionContext
 
   val api: Route =
     new RestApi(system, requestTimeout(config)).routes // the RestApi provides a Route
 
-  implicit val materializer: ActorMaterializer =
-    ActorMaterializer() // bindAndHandle requires an implicit materializer
   val bindingFuture: Future[ServerBinding] =
-    Http().bindAndHandle(api, host, port) //Starts the HTTP server
+    Http().newServerAt(host, port).bindFlow(api) //Starts the HTTP server
 
   val log = Logging(system.eventStream, "go-ticks")
   bindingFuture

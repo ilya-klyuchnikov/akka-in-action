@@ -44,7 +44,8 @@ trait RestRoutes extends BoxOfficeApi with EventMarshalling {
           // POST /events/:event
           entity(as[EventDescription]) { ed =>
             onSuccess(createEvent(event, ed.tickets)) {
-              case BoxOffice.EventCreated(event) => complete(Created, event)
+              case BoxOffice.EventCreated(event) =>
+                complete(Created, event)
               case BoxOffice.EventExists =>
                 val err = Error(s"$event event exists already.")
                 complete(BadRequest, err)
