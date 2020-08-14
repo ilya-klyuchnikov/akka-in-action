@@ -3,7 +3,7 @@ package aia.faulttolerance
 import java.io.File
 import java.util.UUID
 import akka.actor._
-import akka.actor.SupervisorStrategy.{ Stop, Resume, Restart, Escalate }
+import akka.actor.SupervisorStrategy.{Stop, Resume, Restart, Escalate}
 import akka.actor.OneForOneStrategy
 import scala.concurrent.duration._
 import language.postfixOps
@@ -15,27 +15,28 @@ package dbstrategy2 {
     val system = ActorSystem("logprocessing")
 
     val databaseUrls = Vector(
-      "http://mydatabase1", 
+      "http://mydatabase1",
       "http://mydatabase2",
-      "http://mydatabase3"
+      "http://mydatabase3",
     )
-    
+
     system.actorOf(
-      LogProcessingSupervisor.props(sources, databaseUrls), 
-      LogProcessingSupervisor.name
+      LogProcessingSupervisor.props(sources, databaseUrls),
+      LogProcessingSupervisor.name,
     )
   }
 
   object LogProcessingSupervisor {
     def props(sources: Vector[String], databaseUrls: Vector[String]) =
       Props(new LogProcessingSupervisor(sources, databaseUrls))
-    def name = "file-watcher-supervisor" 
+    def name = "file-watcher-supervisor"
   }
 
   class LogProcessingSupervisor(
-    sources: Vector[String], 
-    databaseUrls: Vector[String]
-  ) extends Actor with ActorLogging {
+      sources: Vector[String],
+      databaseUrls: Vector[String],
+  ) extends Actor
+      with ActorLogging {
 
     var fileWatchers: Vector[ActorRef] = sources.map { source =>
       val fileWatcher = context.actorOf(
@@ -45,9 +46,10 @@ package dbstrategy2 {
       fileWatcher
     }
 
-    override def supervisorStrategy = AllForOneStrategy() {
-      case _: DiskError => Stop
-    }
+    override def supervisorStrategy =
+      AllForOneStrategy() {
+        case _: DiskError => Stop
+      }
 
     def receive = {
       case Terminated(fileWatcher) =>
@@ -58,25 +60,27 @@ package dbstrategy2 {
         }
     }
   }
-  
+
   object FileWatcher {
-   case class NewFile(file: File, timeAdded: Long)
-   case class SourceAbandoned(uri: String)
+    case class NewFile(file: File, timeAdded: Long)
+    case class SourceAbandoned(uri: String)
   }
 
-  class FileWatcher(source: String,
-                    databaseUrls: Vector[String])
-    extends Actor with ActorLogging with FileWatchingAbilities {
+  class FileWatcher(source: String, databaseUrls: Vector[String])
+      extends Actor
+      with ActorLogging
+      with FileWatchingAbilities {
     register(source)
-    
-    override def supervisorStrategy = OneForOneStrategy() {
-      case _: CorruptedFileException => Resume
-    }
-    
+
+    override def supervisorStrategy =
+      OneForOneStrategy() {
+        case _: CorruptedFileException => Resume
+      }
+
     val logProcessor = context.actorOf(
-      LogProcessor.props(databaseUrls), 
-      LogProcessor.name
-    )   
+      LogProcessor.props(databaseUrls),
+      LogProcessor.name,
+    )
     context.watch(logProcessor)
 
     import FileWatcher._
@@ -87,35 +91,35 @@ package dbstrategy2 {
       case SourceAbandoned(uri) if uri == source =>
         log.info(s"$uri abandoned, stopping file watcher.")
         self ! PoisonPill
-      case Terminated(`logProcessor`) => 
+      case Terminated(`logProcessor`) =>
         log.info(s"Log processor terminated, stopping file watcher.")
         self ! PoisonPill
     }
   }
-  
+
   object LogProcessor {
-    def props(databaseUrls: Vector[String]) = 
+    def props(databaseUrls: Vector[String]) =
       Props(new LogProcessor(databaseUrls))
     def name = s"log_processor_${UUID.randomUUID.toString}"
     // represents a new log file
     case class LogFile(file: File)
   }
 
-  class LogProcessor(databaseUrls: Vector[String])
-    extends Actor with ActorLogging with LogParsing {
+  class LogProcessor(databaseUrls: Vector[String]) extends Actor with ActorLogging with LogParsing {
     require(databaseUrls.nonEmpty)
 
     val initialDatabaseUrl = databaseUrls.head
     var alternateDatabases = databaseUrls.tail
 
-    override def supervisorStrategy = OneForOneStrategy() {
-      case _: DbBrokenConnectionException => Restart
-      case _: DbNodeDownException => Stop
-    }
+    override def supervisorStrategy =
+      OneForOneStrategy() {
+        case _: DbBrokenConnectionException => Restart
+        case _: DbNodeDownException         => Stop
+      }
 
     var dbWriter = context.actorOf(
-      DbWriter.props(initialDatabaseUrl), 
-      DbWriter.name(initialDatabaseUrl)
+      DbWriter.props(initialDatabaseUrl),
+      DbWriter.name(initialDatabaseUrl),
     )
     context.watch(dbWriter)
 
@@ -125,14 +129,14 @@ package dbstrategy2 {
       case LogFile(file) =>
         val lines: Vector[DbWriter.Line] = parse(file)
         lines.foreach(dbWriter ! _)
-      case Terminated(_) => 
-        if(alternateDatabases.nonEmpty) {
-          val newDatabaseUrl = alternateDatabases.head  
-          alternateDatabases = alternateDatabases.tail    
+      case Terminated(_) =>
+        if (alternateDatabases.nonEmpty) {
+          val newDatabaseUrl = alternateDatabases.head
+          alternateDatabases = alternateDatabases.tail
           dbWriter = context.actorOf(
-            DbWriter.props(newDatabaseUrl), 
-            DbWriter.name(newDatabaseUrl)
-          )      
+            DbWriter.props(newDatabaseUrl),
+            DbWriter.name(newDatabaseUrl),
+          )
           context.watch(dbWriter)
         } else {
           log.error("All Db nodes broken, stopping.")
@@ -141,7 +145,7 @@ package dbstrategy2 {
     }
   }
 
-  object DbWriter  {
+  object DbWriter {
     def props(databaseUrl: String) =
       Props(new DbWriter(databaseUrl))
     def name(databaseUrl: String) =
@@ -157,47 +161,42 @@ package dbstrategy2 {
     import DbWriter._
     def receive = {
       case Line(time, message, messageType) =>
-        connection.write(Map('time -> time,
-          'message -> message,
-          'messageType -> messageType))
+        connection.write(Map('time -> time, 'message -> message, 'messageType -> messageType))
     }
 
     override def postStop(): Unit = {
-      connection.close() 
+      connection.close()
     }
   }
 
   class DbCon(url: String) {
+
     /**
-     * Writes a map to a database.
-     * @param map the map to write to the database.
-     * @throws DbBrokenConnectionException when the connection is broken. It might be back later
-     * @throws DbNodeDownException when the database Node has been removed from the database cluster. It will never work again.
-     */
-    def write(map: Map[Symbol, Any]): Unit =  {
+      * Writes a map to a database.
+      * @param map the map to write to the database.
+      * @throws DbBrokenConnectionException when the connection is broken. It might be back later
+      * @throws DbNodeDownException when the database Node has been removed from the database cluster. It will never work again.
+      */
+    def write(map: Map[Symbol, Any]): Unit = {
       //
     }
-    
+
     def close(): Unit = {
       //
     }
   }
-  
-  @SerialVersionUID(1L)
-  class DiskError(msg: String)
-    extends Error(msg) with Serializable
 
   @SerialVersionUID(1L)
-  class CorruptedFileException(msg: String, val file: File)
-    extends Exception(msg) with Serializable
+  class DiskError(msg: String) extends Error(msg) with Serializable
 
   @SerialVersionUID(1L)
-  class DbBrokenConnectionException(msg: String)
-    extends Exception(msg) with Serializable
+  class CorruptedFileException(msg: String, val file: File) extends Exception(msg) with Serializable
 
   @SerialVersionUID(1L)
-  class DbNodeDownException(msg: String)
-    extends Exception(msg) with Serializable
+  class DbBrokenConnectionException(msg: String) extends Exception(msg) with Serializable
+
+  @SerialVersionUID(1L)
+  class DbNodeDownException(msg: String) extends Exception(msg) with Serializable
 
   trait LogParsing {
     import DbWriter._
@@ -210,8 +209,6 @@ package dbstrategy2 {
   }
 
   trait FileWatchingAbilities {
-    def register(uri: String): Unit = {
-
-    }
+    def register(uri: String): Unit = {}
   }
 }

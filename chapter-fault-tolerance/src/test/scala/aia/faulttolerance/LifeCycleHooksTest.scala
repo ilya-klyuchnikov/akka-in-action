@@ -13,8 +13,7 @@ class LifeCycleHooksTest extends TestKit(ActorSystem("LifCycleTest")) with WordS
 
   "The Child" must {
     "log lifecycle hooks" in {
-      val testActorRef = system.actorOf(
-        Props[LifeCycleHooks], "LifeCycleHooks")
+      val testActorRef = system.actorOf(Props[LifeCycleHooks], "LifeCycleHooks")
       watch(testActorRef)
       testActorRef ! ForceRestart
       testActorRef.tell(SampleMessage, testActor)
